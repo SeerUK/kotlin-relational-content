@@ -11,12 +11,10 @@
 
 package hello
 
-import org.springframework.boot.SpringApplication
-import org.springframework.boot.autoconfigure.SpringBootApplication
-
-@SpringBootApplication
-open class Application
+import hello.netty.HttpServer
 
 fun main(args: Array<String>) {
-    SpringApplication.run(Application::class.java, *args)
+    val server = HttpServer()
+
+    server.run(args)
 }
