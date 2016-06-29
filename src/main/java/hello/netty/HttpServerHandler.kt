@@ -12,26 +12,53 @@
 package hello.netty
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.netty.buffer.Unpooled
+import io.netty.channel.ChannelFutureListener
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
-import io.netty.handler.codec.http.HttpRequest
+import io.netty.handler.codec.http.*
+import io.netty.util.CharsetUtil
 import java.util.concurrent.atomic.AtomicLong
 
 class HttpServerHandler : SimpleChannelInboundHandler<Any>() {
-    var counter = AtomicLong(0)
     val mapper = ObjectMapper()
+
+    companion object {
+        var counter = AtomicLong(0)
+    }
 
     override fun channelRead0(ctx: ChannelHandlerContext, msg: Any) {
         if (msg is HttpRequest) {
-            //val request = msg
+            val request = msg
             val greeting = Greeting(counter.incrementAndGet(), "Hello World!")
             val payload = mapper.writeValueAsString(greeting)
-            val response = StringBuilder()
+            val buffer = StringBuilder()
 
-            response.append(payload)
+            val keepAlive = HttpUtil.isKeepAlive(request);
 
-            ctx.writeAndFlush(response.toString())
+            buffer.append(payload)
+
+            val response = DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1,
+                HttpResponseStatus.OK,
+                Unpooled.copiedBuffer(buffer.toString(), CharsetUtil.UTF_8)
+            )
+
+            response.headers().set("Content-Type", "application/json; charset=UTF-8")
+
+            if (!keepAlive) {
+                ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+            } else {
+                response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+                response.headers().set(HttpHeaderNames.CONTENT_LENGTH, buffer.length);
+                ctx.write(response);
+            }
         }
+    }
+
+    @Throws(Exception::class)
+    override fun channelReadComplete(ctx: ChannelHandlerContext) {
+        ctx.flush()
     }
 
     data class Greeting(val id: Long, val content: String)

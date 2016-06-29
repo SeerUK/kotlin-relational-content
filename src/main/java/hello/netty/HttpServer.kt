@@ -33,7 +33,7 @@ final class HttpServer {
             bootstrap
                 .group(mainGroup, wrkrGroup)
                 .channel(NioServerSocketChannel::class.java)
-                .handler(LoggingHandler(LogLevel.INFO))
+//                .handler(LoggingHandler(LogLevel.INFO))
                 .childHandler(HttpServerInitializer())
 
             val channel = bootstrap.bind(PORT).sync().channel()
